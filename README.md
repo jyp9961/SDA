@@ -25,12 +25,15 @@ wget http://data.csail.mit.edu/places/places365/places365standard_easyformat.tar
 ```
 After downloading and extracting the data, add your dataset directory to the datasets list in `setup/config.cfg`.
 
-# Run `SGQN` training:
+# Run `SVEA` training:
 ```bash
-python src/train.py --algorithm sgsac --sgqn_quantile [QUANTILE] --seed [SEED] --eval_mode video_easy --domain_name [DOMAIN] --task_name [TASK];
+python src/train.py --algorithm svea --seed [SEED] --domain_name [DOMAIN] --task_name [TASK];
 ```
-You can also run `SVEA`, `SODA`, `RAD`, `SAC`.
 
+# Run `SDA` training:
+```bash
+python src/train.py --algorithm sda --seed [SEED] --sda_quantile [SDA_QUANTILE] --domain_name [DOMAIN] --task_name [TASK];
+```
 
 # DMControl Generalization Benchmark
 
