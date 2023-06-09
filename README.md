@@ -1,6 +1,6 @@
 
 # Overview
-![Perf](results/AU7005/total_gb.png)
+![Perf](results/AU7005/walker_walk_gb.png)
 
 ## Setup
 We assume that you have access to a GPU with CUDA >=9.2 support. All dependencies can then be installed with the following commands:
