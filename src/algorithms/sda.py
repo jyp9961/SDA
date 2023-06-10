@@ -91,68 +91,14 @@ class SDA(SAC):
         current_Q1, current_Q2 = self.critic(total_obs, total_action)
         critic_loss = F.mse_loss(current_Q1, total_target_Q) + F.mse_loss(current_Q2, total_target_Q)
         
-        '''
-        # This part implements normal critic loss and sgsac self-consistency loss.
-        # normal critic loss
-        current_Q1, current_Q2 = self.critic(obs, action)
-        normal_critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)
-        # self consistency loss
-        salient_Q1, salient_Q2 = self.critic(salient_obs, action)
-        consistency_critic_loss = F.mse_loss(current_Q1,salient_Q1) + F.mse_loss(current_Q2,salient_Q2)
-        critic_loss = normal_critic_loss + 0.5 * consistency_critic_loss
-        '''
-
         if L is not None:
             L.log("train_critic/loss", critic_loss, step)
 
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
-
-        if step % self.aux_update_freq == -1:
-            # sgsac reconstruction loss (reconstruct saliency maps)
-            obs_grad = compute_attribution(self.critic, obs, action.detach())
-            mask = compute_attribution_mask(obs_grad, quantile=self.attrib_quantile).float()
-            
-            attrib = self.attribution_predictor(overlay_obs.detach(),action.detach())
-            aux_loss = F.binary_cross_entropy_with_logits(attrib, mask.detach())
-
-            self.aux_optimizer.zero_grad()            
-            aux_loss.backward()
-            self.aux_optimizer.step()
         
         recon_loss_numpy = None
-        recon_update_freq = 1
-        if step % recon_update_freq == -1:
-            # reconstruction loss (reconstruct normal obs)
-            recon_input = torch.cat([obs, overlay_obs, masked_obs], axis=0)
-            recon_target = torch.cat([obs, obs, obs], axis=0)
-            recon_predict = self.normal_obs_predictor(recon_input.detach(), detach=True)
-            recon_loss = F.huber_loss(recon_predict, recon_target.detach(), delta=1.0)
-
-            self.recon_optimizer.zero_grad()
-            recon_loss.backward()
-            self.recon_optimizer.step()
-            recon_loss_numpy = recon_loss.cpu().detach().numpy()
-
-            if step % self.args.save_freq == 0:
-                self.reconstruct_obs_path = os.path.join(self.work_dir, 'reconstruct')
-                if not os.path.exists(self.reconstruct_obs_path):
-                    os.mkdir(self.reconstruct_obs_path)
-                np.save(os.path.join(self.reconstruct_obs_path, 'input_{}'.format(step)), recon_input.cpu().detach().numpy())
-                np.save(os.path.join(self.reconstruct_obs_path, 'target_{}'.format(step)), recon_target.cpu().detach().numpy())
-                np.save(os.path.join(self.reconstruct_obs_path, 'predict_{}'.format(step)), recon_predict.cpu().detach().numpy())
-
-            '''
-            with torch.no_grad():
-                current_Q1, current_Q2 = self.critic(obs, action)
-                current_Q = torch.min(current_Q1, current_Q2)
-            recon_Q1, recon_Q2 = self.critic(recon_predict.detach()[-obs.size(0):], action)
-            recon_critic_loss = F.mse_loss(recon_Q1, current_Q) + F.mse_loss(recon_Q2, current_Q)
-            self.critic_optimizer.zero_grad()
-            recon_critic_loss.backward()
-            self.critic_optimizer.step()
-            '''
 
         return critic_loss.detach().cpu().numpy(), recon_loss_numpy
 
